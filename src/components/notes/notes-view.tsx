@@ -3,24 +3,16 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Pin, PinOff, Plus, Search, Sparkles } from "lucide-react";
+import { Pin, PinOff, Plus, Search, Sparkles, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { createNote, togglePinNote } from "@/actions/notes";
+import { togglePinNote } from "@/actions/notes";
 import { runAI } from "@/actions/ai";
-import { useDialogForm } from "@/hooks/use-dialog-form";
+import { NoteFormDialog } from "@/components/notes/note-form-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import type { Note } from "@/types/database";
 
 export function NotesView({ notes: initialNotes }: { notes: Note[] }) {
@@ -29,9 +21,6 @@ export function NotesView({ notes: initialNotes }: { notes: Note[] }) {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [, startTransition] = useTransition();
-  const { pending, handleSubmit } = useDialogForm(() => setDialogOpen(false), {
-    successMessage: "Note created",
-  });
 
   const filtered = notes.filter(
     (n) =>
@@ -64,30 +53,15 @@ export function NotesView({ notes: initialNotes }: { notes: Note[] }) {
   return (
     <div className="animate-fade-in">
       <PageHeader title="Notes" description="Second brain — ideas, workflows, meeting notes">
-        <Button size="sm" onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4" /> New Note
-        </Button>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle>New Note</DialogTitle></DialogHeader>
-            <form
-              onSubmit={handleSubmit((formData) => createNote(formData))}
-              className="space-y-4"
-            >
-              <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
-                <Input id="title" name="title" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="content">Content</Label>
-                <Textarea id="content" name="content" rows={8} placeholder="Write your thoughts..." />
-              </div>
-              <Button type="submit" className="w-full" disabled={pending}>
-                {pending ? "Creating..." : "Create Note"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <NoteFormDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          trigger={
+            <Button size="sm" onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4" /> New Note
+            </Button>
+          }
+        />
       </PageHeader>
 
       <div className="relative mb-6 max-w-md">
@@ -119,6 +93,19 @@ export function NotesView({ notes: initialNotes }: { notes: Note[] }) {
                     </CardTitle>
                   </Link>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <NoteFormDialog
+                      note={note}
+                      trigger={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          aria-label="Edit note"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      }
+                    />
                     <Button
                       variant="ghost"
                       size="icon"

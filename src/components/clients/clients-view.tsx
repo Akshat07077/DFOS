@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Building2, LayoutGrid, List, Plus } from "lucide-react";
+import { Building2, LayoutGrid, List, Pencil, Plus } from "lucide-react";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -66,45 +66,77 @@ export function ClientsView({
       ) : view === "list" ? (
         <div className="space-y-2">
           {filtered.map((client) => (
-            <Link key={client.id} href={`/clients/${client.id}`} className="flex items-center justify-between rounded-xl border border-border p-4 hover:bg-accent/30">
-              <div>
+            <div
+              key={client.id}
+              className="flex items-center justify-between gap-3 rounded-xl border border-border p-4 hover:bg-accent/30"
+            >
+              <Link href={`/clients/${client.id}`} className="min-w-0 flex-1">
                 <p className="font-medium">{client.company}</p>
-                <p className="text-sm text-muted-foreground">{client.name} · {client.email ?? "—"}</p>
-              </div>
-              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">
+                  {client.name} · {client.email ?? "—"}
+                </p>
+              </Link>
+              <div className="flex items-center gap-2 shrink-0">
                 <ClientStatusBadge status={client.status} />
                 {client.contract_value != null && (
-                  <span className="text-sm text-emerald-400">${Number(client.contract_value).toLocaleString()}</span>
+                  <span className="text-sm text-emerald-400">
+                    ${Number(client.contract_value).toLocaleString()}
+                  </span>
                 )}
+                <ClientFormDialog
+                  client={client}
+                  profiles={profiles}
+                  trigger={
+                    <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Edit client">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  }
+                />
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((client) => (
-            <Link key={client.id} href={`/clients/${client.id}`}>
-              <Card className="h-full transition-all hover:border-primary/30 hover:shadow-md">
-                <CardContent className="pt-5">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-medium">{client.company}</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">{client.name}</p>
-                    </div>
+            <Card
+              key={client.id}
+              className="h-full transition-all hover:border-primary/30 hover:shadow-md"
+            >
+              <CardContent className="pt-5">
+                <div className="flex items-start justify-between gap-2">
+                  <Link href={`/clients/${client.id}`} className="min-w-0 flex-1">
+                    <p className="font-medium hover:text-primary">{client.company}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">{client.name}</p>
+                  </Link>
+                  <div className="flex items-center gap-1 shrink-0">
                     <PriorityBadge priority={client.priority} />
+                    <ClientFormDialog
+                      client={client}
+                      profiles={profiles}
+                      trigger={
+                        <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Edit client">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      }
+                    />
                   </div>
+                </div>
+                <Link href={`/clients/${client.id}`}>
                   <div className="mt-3 flex items-center justify-between">
                     <ClientStatusBadge status={client.status} />
                     {client.contract_value != null && (
-                      <span className="text-xs text-emerald-400">${Number(client.contract_value).toLocaleString()}</span>
+                      <span className="text-xs text-emerald-400">
+                        ${Number(client.contract_value).toLocaleString()}
+                      </span>
                     )}
                   </div>
                   {client.industry && (
                     <p className="mt-2 text-xs text-muted-foreground">{client.industry}</p>
                   )}
-                </CardContent>
-              </Card>
-            </Link>
+                </Link>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

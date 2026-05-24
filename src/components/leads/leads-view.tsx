@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Columns3, LayoutGrid, List, Plus, UserPlus } from "lucide-react";
+import { Columns3, LayoutGrid, List, Pencil, Plus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { updateLeadStatus } from "@/actions/leads";
 import { LeadFormDialog } from "@/components/leads/lead-form-dialog";
@@ -135,6 +135,7 @@ export function LeadsView({
                   key={status}
                   status={status}
                   leads={getColumnLeads(status)}
+                  profiles={profiles}
                   onStatusChange={moveStatus}
                 />
               ))}
@@ -152,6 +153,7 @@ export function LeadsView({
                   key={status}
                   status={status}
                   leads={getColumnLeads(status)}
+                  profiles={profiles}
                   onStatusChange={moveStatus}
                 />
               ))}
@@ -168,34 +170,58 @@ export function LeadsView({
       ) : view === "list" ? (
         <div className="space-y-2">
           {filtered.map((lead) => (
-            <Link
+            <div
               key={lead.id}
-              href={`/leads/${lead.id}`}
               className="flex flex-col gap-3 rounded-xl border border-border p-4 transition-colors hover:bg-accent/30 sm:flex-row sm:items-center sm:justify-between"
             >
-              <div className="min-w-0">
+              <Link href={`/leads/${lead.id}`} className="min-w-0 flex-1">
                 <p className="font-medium truncate">{lead.name}</p>
                 <p className="text-sm text-muted-foreground truncate">
                   {lead.company ?? lead.email ?? "—"}
                 </p>
-              </div>
+              </Link>
               <div className="flex flex-wrap items-center gap-2 shrink-0">
                 <LeadStatusBadge status={lead.status} />
                 <PriorityBadge priority={lead.priority} />
+                <LeadFormDialog
+                  lead={lead}
+                  profiles={profiles}
+                  trigger={
+                    <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Edit lead">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  }
+                />
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       ) : (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((lead) => (
-            <Link key={lead.id} href={`/leads/${lead.id}`}>
-              <Card className="h-full transition-all hover:border-primary/30 hover:shadow-md">
-                <CardContent className="pt-5">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-medium truncate">{lead.name}</p>
+            <Card
+              key={lead.id}
+              className="h-full transition-all hover:border-primary/30 hover:shadow-md"
+            >
+              <CardContent className="pt-5">
+                <div className="flex items-start justify-between gap-2">
+                  <Link href={`/leads/${lead.id}`} className="min-w-0 flex-1">
+                    <p className="font-medium truncate hover:text-primary">{lead.name}</p>
+                  </Link>
+                  <div className="flex items-center gap-1 shrink-0">
                     <PriorityBadge priority={lead.priority} />
+                    <LeadFormDialog
+                      lead={lead}
+                      profiles={profiles}
+                      trigger={
+                        <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Edit lead">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      }
+                    />
                   </div>
+                </div>
+                <Link href={`/leads/${lead.id}`}>
                   <p className="mt-1 text-sm text-muted-foreground truncate">
                     {lead.company ?? "—"}
                   </p>
@@ -207,9 +233,9 @@ export function LeadsView({
                       </span>
                     )}
                   </div>
-                </CardContent>
-              </Card>
-            </Link>
+                </Link>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}
@@ -220,10 +246,12 @@ export function LeadsView({
 function PipelineColumn({
   status,
   leads: columnLeads,
+  profiles,
   onStatusChange,
 }: {
   status: LeadStatus;
   leads: Lead[];
+  profiles: Pick<Profile, "id" | "full_name" | "email">[];
   onStatusChange: (id: string, s: LeadStatus) => void;
 }) {
   return (
@@ -237,7 +265,12 @@ function PipelineColumn({
           <p className="py-8 text-center text-xs text-muted-foreground/60">No leads</p>
         ) : (
           columnLeads.map((lead) => (
-            <LeadCard key={lead.id} lead={lead} onStatusChange={onStatusChange} />
+            <LeadCard
+              key={lead.id}
+              lead={lead}
+              profiles={profiles}
+              onStatusChange={onStatusChange}
+            />
           ))
         )}
       </div>
@@ -247,9 +280,11 @@ function PipelineColumn({
 
 function LeadCard({
   lead,
+  profiles,
   onStatusChange,
 }: {
   lead: Lead;
+  profiles: Pick<Profile, "id" | "full_name" | "email">[];
   onStatusChange: (id: string, s: LeadStatus) => void;
 }) {
   const overdue = isOverdue(lead.next_follow_up);
@@ -262,12 +297,23 @@ function LeadCard({
   return (
     <Card className={cn("shadow-sm", overdue && "border-amber-500/30")}>
       <CardContent className="p-3">
-        <Link href={`/leads/${lead.id}`} className="block min-w-0">
-          <p className="text-sm font-medium leading-tight truncate">{lead.name}</p>
-          <p className="text-xs text-muted-foreground mt-0.5 truncate">
-            {lead.company ?? lead.email ?? "—"}
-          </p>
-        </Link>
+        <div className="flex items-start justify-between gap-1">
+          <Link href={`/leads/${lead.id}`} className="block min-w-0 flex-1">
+            <p className="text-sm font-medium leading-tight truncate">{lead.name}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">
+              {lead.company ?? lead.email ?? "—"}
+            </p>
+          </Link>
+          <LeadFormDialog
+            lead={lead}
+            profiles={profiles}
+            trigger={
+              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" aria-label="Edit lead">
+                <Pencil className="h-3 w-3" />
+              </Button>
+            }
+          />
+        </div>
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           <PriorityBadge priority={lead.priority} />
           {lead.estimated_value != null && (

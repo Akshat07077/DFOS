@@ -47,6 +47,28 @@ export async function createUpdate(formData: FormData) {
   return { data };
 }
 
+export async function updateUpdate(id: string, formData: FormData) {
+  const supabase = await createClient();
+  const projectId = (formData.get("project_id") as string) || null;
+
+  const { error } = await supabase
+    .from("updates")
+    .update({
+      message: formData.get("message") as string,
+      project_id: projectId,
+    })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/updates");
+  revalidatePath("/dashboard");
+  if (projectId) {
+    revalidatePath(`/projects/${projectId}`);
+  }
+  return { success: true };
+}
+
 export async function deleteUpdate(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("updates").delete().eq("id", id);

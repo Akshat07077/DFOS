@@ -19,7 +19,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { updateTaskStatus, deleteTask } from "@/actions/tasks";
 import { TaskFormDialog } from "@/components/tasks/task-form-dialog";
@@ -164,6 +164,8 @@ export function TasksBoard({
                 key={status}
                 status={status}
                 tasks={filtered.filter((t) => t.status === status)}
+                projects={projects}
+                profiles={profiles}
                 onDelete={handleDelete}
               />
             ))}
@@ -182,10 +184,14 @@ export function TasksBoard({
 function KanbanColumn({
   status,
   tasks,
+  projects,
+  profiles,
   onDelete,
 }: {
   status: TaskStatus;
   tasks: Task[];
+  projects: Pick<Project, "id" | "title">[];
+  profiles: Pick<Profile, "id" | "full_name" | "email">[];
   onDelete: (id: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
@@ -204,7 +210,13 @@ function KanbanColumn({
       <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
         <div className="space-y-2 min-h-[100px] rounded-lg bg-muted/30 p-2">
           {tasks.map((task) => (
-            <SortableTask key={task.id} task={task} onDelete={onDelete} />
+            <SortableTask
+              key={task.id}
+              task={task}
+              projects={projects}
+              profiles={profiles}
+              onDelete={onDelete}
+            />
           ))}
         </div>
       </SortableContext>
@@ -212,7 +224,17 @@ function KanbanColumn({
   );
 }
 
-function SortableTask({ task, onDelete }: { task: Task; onDelete: (id: string) => void }) {
+function SortableTask({
+  task,
+  projects,
+  profiles,
+  onDelete,
+}: {
+  task: Task;
+  projects: Pick<Project, "id" | "title">[];
+  profiles: Pick<Profile, "id" | "full_name" | "email">[];
+  onDelete: (id: string) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id });
 
@@ -223,17 +245,27 @@ function SortableTask({ task, onDelete }: { task: Task; onDelete: (id: string) =
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <TaskCard task={task} onDelete={onDelete} isDragging={isDragging} />
+      <TaskCard
+        task={task}
+        projects={projects}
+        profiles={profiles}
+        onDelete={onDelete}
+        isDragging={isDragging}
+      />
     </div>
   );
 }
 
 function TaskCard({
   task,
+  projects,
+  profiles,
   onDelete,
   isDragging,
 }: {
   task: Task;
+  projects?: Pick<Project, "id" | "title">[];
+  profiles?: Pick<Profile, "id" | "full_name" | "email">[];
   onDelete?: (id: string) => void;
   isDragging?: boolean;
 }) {
@@ -249,19 +281,41 @@ function TaskCard({
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium leading-tight">{task.title}</p>
-        {onDelete && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 shrink-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(task.id);
-            }}
-          >
-            <Trash2 className="h-3 w-3 text-muted-foreground" />
-          </Button>
-        )}
+        <div className="flex shrink-0 gap-0.5">
+          {projects && profiles && (
+            <TaskFormDialog
+              task={task}
+              projects={projects}
+              profiles={profiles}
+              trigger={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  aria-label="Edit task"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Pencil className="h-3 w-3 text-muted-foreground" />
+                </Button>
+              }
+            />
+          )}
+          {onDelete && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(task.id);
+              }}
+            >
+              <Trash2 className="h-3 w-3 text-muted-foreground" />
+            </Button>
+          )}
+        </div>
       </div>
       {task.project && (
         <p className="mt-1 text-xs text-muted-foreground">{task.project.title}</p>
