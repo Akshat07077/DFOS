@@ -33,9 +33,9 @@ const publishableKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const USER = {
-  email: "Admin@gmail.com",
+  email: "shourya@designsverse.in",
   password: "Admin@123",
-  full_name: "Akshat Sarma",
+  full_name: "Shourya sharma",
 };
 
 if (!url) {

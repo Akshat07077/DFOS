@@ -47,7 +47,7 @@ export function LeadsView({
     });
   };
 
-  const pipelineStatuses = LEAD_PIPELINE_STATUSES.filter((s) => s !== "won" && s !== "lost");
+  const pipelineStatuses = LEAD_PIPELINE_STATUSES;
 
   return (
     <div className="animate-fade-in">
@@ -80,23 +80,36 @@ export function LeadsView({
         <span className="text-sm text-muted-foreground">{activeLeads.length} active · {leads.length} total</span>
       </div>
 
-      {filtered.length === 0 ? (
+      {leads.length === 0 && view !== "pipeline" ? (
         <EmptyState icon={UserPlus} title="No leads yet" description="Add your first prospect to start the pipeline." action={{ label: "New Lead", onClick: () => setDialogOpen(true) }} />
       ) : view === "pipeline" ? (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {pipelineStatuses.map((status) => (
-            <div key={status} className="min-w-[260px] flex-shrink-0">
-              <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground px-1">
-                {LEAD_STATUS_LABELS[status]} ({filtered.filter((l) => l.status === status).length})
-              </h3>
-              <div className="space-y-2 min-h-[120px] rounded-lg bg-muted/30 p-2">
-                {filtered.filter((l) => l.status === status).map((lead) => (
-                  <LeadCard key={lead.id} lead={lead} onStatusChange={moveStatus} />
-                ))}
+        <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
+          {pipelineStatuses.map((status) => {
+            const columnLeads =
+              filterStatus === "all"
+                ? leads.filter((l) => l.status === status)
+                : filtered.filter((l) => l.status === status);
+
+            return (
+              <div key={status} className="min-w-0 flex flex-col">
+                <h3 className="mb-2 truncate text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  {LEAD_STATUS_LABELS[status]} ({columnLeads.length})
+                </h3>
+                <div className="flex-1 space-y-2 rounded-lg bg-muted/30 p-2 min-h-[140px]">
+                  {columnLeads.length === 0 ? (
+                    <p className="py-6 text-center text-[11px] text-muted-foreground/60">No leads</p>
+                  ) : (
+                    columnLeads.map((lead) => (
+                      <LeadCard key={lead.id} lead={lead} onStatusChange={moveStatus} compact />
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState icon={UserPlus} title="No leads match filter" description="Try a different status or add a new lead." action={{ label: "New Lead", onClick: () => setDialogOpen(true) }} />
       ) : view === "list" ? (
         <div className="space-y-2">
           {filtered.map((lead) => (
@@ -139,35 +152,66 @@ export function LeadsView({
   );
 }
 
-function LeadCard({ lead, onStatusChange }: { lead: Lead; onStatusChange: (id: string, s: LeadStatus) => void }) {
+function LeadCard({
+  lead,
+  onStatusChange,
+  compact,
+}: {
+  lead: Lead;
+  onStatusChange: (id: string, s: LeadStatus) => void;
+  compact?: boolean;
+}) {
   const overdue = isOverdue(lead.next_follow_up);
-  const nextStatuses = LEAD_PIPELINE_STATUSES.filter((s) => s !== lead.status && s !== "won" && s !== "lost").slice(0, 2);
+  const currentIndex = LEAD_PIPELINE_STATUSES.indexOf(lead.status);
+  const nextStatus =
+    currentIndex >= 0 && currentIndex < LEAD_PIPELINE_STATUSES.length - 1
+      ? LEAD_PIPELINE_STATUSES[currentIndex + 1]
+      : null;
 
   return (
     <Card className={cn("shadow-sm", overdue && "border-amber-500/30")}>
-      <CardContent className="p-3">
+      <CardContent className={cn(compact ? "p-2" : "p-3")}>
         <Link href={`/leads/${lead.id}`} className="block">
-          <p className="text-sm font-medium leading-tight">{lead.name}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{lead.company ?? lead.email ?? "—"}</p>
+          <p className={cn("font-medium leading-tight", compact ? "text-xs" : "text-sm")}>
+            {lead.name}
+          </p>
+          {!compact && (
+            <p className="text-xs text-muted-foreground mt-0.5">{lead.company ?? lead.email ?? "—"}</p>
+          )}
         </Link>
-        <div className="mt-2 flex flex-wrap gap-1">
+        <div className="mt-1.5 flex flex-wrap gap-1">
           <PriorityBadge priority={lead.priority} />
-          {lead.estimated_value != null && (
-            <span className="text-[10px] text-emerald-400">${Number(lead.estimated_value).toLocaleString()}</span>
+          {lead.estimated_value != null && compact && (
+            <span className="text-[10px] text-emerald-400">
+              ${Number(lead.estimated_value).toLocaleString()}
+            </span>
           )}
         </div>
-        {lead.next_follow_up && (
+        {lead.next_follow_up && !compact && (
           <p className={cn("mt-1.5 text-[10px]", overdue ? "text-amber-400" : "text-muted-foreground")}>
             Follow-up {formatRelativeDate(lead.next_follow_up)}
           </p>
         )}
-        <div className="mt-2 flex gap-1">
-          {nextStatuses.map((s) => (
-            <Button key={s} variant="ghost" size="sm" className="h-6 px-2 text-[10px]" onClick={() => onStatusChange(lead.id, s)}>
-              → {LEAD_STATUS_LABELS[s]}
-            </Button>
-          ))}
-        </div>
+        {nextStatus && compact && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-1.5 h-6 w-full px-1 text-[10px]"
+            onClick={() => onStatusChange(lead.id, nextStatus)}
+          >
+            → {LEAD_STATUS_LABELS[nextStatus]}
+          </Button>
+        )}
+        {!compact && nextStatus && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-2 h-6 px-2 text-[10px]"
+            onClick={() => onStatusChange(lead.id, nextStatus)}
+          >
+            → {LEAD_STATUS_LABELS[nextStatus]}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
