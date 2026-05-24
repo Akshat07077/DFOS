@@ -13,6 +13,7 @@ import {
   Sparkles,
   LogOut,
   Command,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/actions/auth";
@@ -29,22 +30,42 @@ const navItems = [
   { href: "/ai", label: "AI", icon: Sparkles },
 ];
 
-export function Sidebar({ onCommandPalette }: { onCommandPalette?: () => void }) {
+export function Sidebar({
+  onCommandPalette,
+  onNavigate,
+  showClose,
+  className,
+}: {
+  onCommandPalette?: () => void;
+  onNavigate?: () => void;
+  showClose?: boolean;
+  className?: string;
+}) {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-60 flex-col border-r border-border bg-card/50 backdrop-blur-xl">
+    <aside
+      className={cn(
+        "flex h-full w-60 flex-col border-r border-border bg-card/95 backdrop-blur-xl",
+        className
+      )}
+    >
       <div className="flex h-14 items-center gap-2 border-b border-border px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20 text-primary font-bold text-sm">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20 text-primary font-bold text-sm shrink-0">
           DV
         </div>
-        <div>
-          <p className="text-sm font-semibold leading-none">DesignsVerse</p>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold leading-none truncate">DesignsVerse</p>
           <p className="text-[10px] text-muted-foreground">Founder OS</p>
         </div>
+        {showClose && onNavigate && (
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={onNavigate}>
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
-      <nav className="flex-1 space-y-0.5 p-3">
+      <nav className="flex-1 overflow-y-auto space-y-0.5 p-3">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -52,15 +73,16 @@ export function Sidebar({ onCommandPalette }: { onCommandPalette?: () => void })
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all",
                 active
                   ? "bg-primary/15 text-primary font-medium"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
-              <Icon className="h-4 w-4" />
-              {item.label}
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="truncate">{item.label}</span>
             </Link>
           );
         })}
@@ -70,11 +92,14 @@ export function Sidebar({ onCommandPalette }: { onCommandPalette?: () => void })
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 text-muted-foreground"
-          onClick={onCommandPalette}
+          onClick={() => {
+            onCommandPalette?.();
+            onNavigate?.();
+          }}
         >
-          <Command className="h-4 w-4" />
+          <Command className="h-4 w-4 shrink-0" />
           Command
-          <kbd className="ml-auto rounded border border-border px-1.5 text-[10px]">⌘K</kbd>
+          <kbd className="ml-auto hidden sm:inline rounded border border-border px-1.5 text-[10px]">⌘K</kbd>
         </Button>
         <form action={signOut}>
           <Button
@@ -82,7 +107,7 @@ export function Sidebar({ onCommandPalette }: { onCommandPalette?: () => void })
             variant="ghost"
             className="w-full justify-start gap-3 text-muted-foreground"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-4 w-4 shrink-0" />
             Sign out
           </Button>
         </form>
