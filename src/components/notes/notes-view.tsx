@@ -7,6 +7,7 @@ import { Pin, PinOff, Plus, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { createNote, togglePinNote } from "@/actions/notes";
 import { runAI } from "@/actions/ai";
+import { useDialogForm } from "@/hooks/use-dialog-form";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import type { Note } from "@/types/database";
@@ -28,26 +28,16 @@ export function NotesView({ notes: initialNotes }: { notes: Note[] }) {
   const [notes, setNotes] = useState(initialNotes);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
+  const { pending, handleSubmit } = useDialogForm(() => setDialogOpen(false), {
+    successMessage: "Note created",
+  });
 
   const filtered = notes.filter(
     (n) =>
       n.title.toLowerCase().includes(search.toLowerCase()) ||
       n.content.toLowerCase().includes(search.toLowerCase())
   );
-
-  const handleCreate = (formData: FormData) => {
-    startTransition(async () => {
-      const result = await createNote(formData);
-      if (result?.error) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success("Note created");
-      setDialogOpen(false);
-      router.refresh();
-    });
-  };
 
   const handlePin = (id: string, pinned: boolean) => {
     startTransition(async () => {
@@ -74,13 +64,16 @@ export function NotesView({ notes: initialNotes }: { notes: Note[] }) {
   return (
     <div className="animate-fade-in">
       <PageHeader title="Notes" description="Second brain — ideas, workflows, meeting notes">
+        <Button size="sm" onClick={() => setDialogOpen(true)}>
+          <Plus className="h-4 w-4" /> New Note
+        </Button>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm"><Plus className="h-4 w-4" /> New Note</Button>
-          </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>New Note</DialogTitle></DialogHeader>
-            <form action={handleCreate} className="space-y-4">
+            <form
+              onSubmit={handleSubmit((formData) => createNote(formData))}
+              className="space-y-4"
+            >
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
                 <Input id="title" name="title" required />

@@ -1,10 +1,9 @@
 "use client";
 
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Radio, Plus } from "lucide-react";
-import { toast } from "sonner";
 import { createUpdate } from "@/actions/updates";
+import { useDialogForm } from "@/hooks/use-dialog-form";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import type { Project, Update } from "@/types/database";
 
@@ -27,30 +25,26 @@ export function UpdatesFeed({
   updates: Update[];
   projects: Pick<Project, "id" | "title">[];
 }) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-
-  const handleCreate = (formData: FormData) => {
-    startTransition(async () => {
-      const result = await createUpdate(formData);
-      if (result?.error) toast.error(result.error);
-      else {
-        toast.success("Update posted");
-        router.refresh();
-      }
-    });
-  };
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const { pending, handleSubmit } = useDialogForm(() => setDialogOpen(false), {
+    successMessage: "Update posted",
+  });
 
   return (
     <div className="animate-fade-in max-w-2xl">
       <PageHeader title="Updates" description="Internal async feed for founder communication">
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button size="sm"><Plus className="h-4 w-4" /> Post Update</Button>
-          </DialogTrigger>
+        <Button size="sm" onClick={() => setDialogOpen(true)}>
+          <Plus className="h-4 w-4" /> Post Update
+        </Button>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent>
-            <DialogHeader><DialogTitle>Post Update</DialogTitle></DialogHeader>
-            <form action={handleCreate} className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>Post Update</DialogTitle>
+            </DialogHeader>
+            <form
+              onSubmit={handleSubmit((formData) => createUpdate(formData))}
+              className="space-y-4"
+            >
               <div className="space-y-2">
                 <Label htmlFor="message">Message</Label>
                 <Textarea id="message" name="message" required rows={4} />
@@ -64,7 +58,9 @@ export function UpdatesFeed({
                 >
                   <option value="">General</option>
                   {projects.map((p) => (
-                    <option key={p.id} value={p.id}>{p.title}</option>
+                    <option key={p.id} value={p.id}>
+                      {p.title}
+                    </option>
                   ))}
                 </select>
               </div>
