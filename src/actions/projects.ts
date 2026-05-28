@@ -12,6 +12,7 @@ export async function getProjects() {
       *,
       project_tags(tag_id, tags(id, name, color))
     `)
+    .is("deleted_at", null)
     .order("updated_at", { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -32,6 +33,7 @@ export async function getProject(id: string) {
       project_links(*)
     `)
     .eq("id", id)
+    .is("deleted_at", null)
     .single();
 
   if (error) throw new Error(error.message);
@@ -143,12 +145,16 @@ export async function updateProject(id: string, formData: FormData) {
 
 export async function deleteProject(id: string) {
   const supabase = await createClient();
-  const { error } = await supabase.from("projects").delete().eq("id", id);
+  const { error } = await supabase
+    .from("projects")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
 
   if (error) return { error: error.message };
 
   revalidatePath("/projects");
   revalidatePath("/dashboard");
+  revalidatePath("/trash");
   return { success: true };
 }
 

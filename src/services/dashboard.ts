@@ -26,35 +26,43 @@ export async function getDashboardData() {
     supabase
       .from("projects")
       .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
       .in("status", ["planning", "active"]),
     supabase
       .from("tasks")
       .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
       .neq("status", "done"),
     supabase
       .from("tasks")
       .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
       .neq("status", "done")
       .lt("deadline", now),
     supabase
       .from("notes")
       .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
       .eq("is_pinned", true),
     supabase
       .from("updates")
       .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
       .gte("created_at", weekStart),
     supabase
       .from("leads")
       .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
       .in("status", ["new", "contacted", "qualified", "proposal", "negotiation"]),
     supabase
       .from("clients")
       .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
       .in("status", ["active", "onboarding"]),
     supabase
       .from("tasks")
       .select(`*, project:projects(id, title)`)
+      .is("deleted_at", null)
       .neq("status", "done")
       .gte("deadline", todayStart)
       .lte("deadline", tomorrowEnd)
@@ -67,11 +75,13 @@ export async function getDashboardData() {
         author:profiles!updates_author_id_fkey(id, full_name, email),
         project:projects(id, title)
       `)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(6),
     supabase
       .from("tasks")
       .select(`*, project:projects(id, title)`)
+      .is("deleted_at", null)
       .neq("status", "done")
       .gte("deadline", now)
       .order("deadline", { ascending: true })
@@ -79,6 +89,7 @@ export async function getDashboardData() {
     supabase
       .from("leads")
       .select("id, name, company, next_follow_up, status")
+      .is("deleted_at", null)
       .in("status", ["new", "contacted", "qualified", "proposal", "negotiation"])
       .not("next_follow_up", "is", null)
       .lte("next_follow_up", tomorrowEnd)
@@ -100,6 +111,7 @@ export async function getDashboardData() {
   const { data: overdueTaskList } = await supabase
     .from("tasks")
     .select(`*, project:projects(id, title)`)
+    .is("deleted_at", null)
     .neq("status", "done")
     .lt("deadline", now)
     .order("deadline", { ascending: true })

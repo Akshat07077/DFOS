@@ -12,6 +12,7 @@ import {
   Radio,
   Sparkles,
   Download,
+  Trash2,
   Plus,
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -26,6 +27,7 @@ const pages = [
   { href: "/updates", label: "Updates", icon: Radio },
   { href: "/ai", label: "AI Assistant", icon: Sparkles },
   { href: "/backup", label: "Database Backup", icon: Download },
+  { href: "/trash", label: "Trash", icon: Trash2 },
 ];
 
 const quickActions = [

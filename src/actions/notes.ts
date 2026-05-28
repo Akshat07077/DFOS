@@ -11,6 +11,7 @@ export async function getNotes(search?: string) {
       *,
       note_tags(tag_id, tags(id, name, color))
     `)
+    .is("deleted_at", null)
     .order("is_pinned", { ascending: false })
     .order("updated_at", { ascending: false });
 
@@ -36,6 +37,7 @@ export async function getNote(id: string) {
       note_tags(tag_id, tags(id, name, color))
     `)
     .eq("id", id)
+    .is("deleted_at", null)
     .single();
 
   if (error) throw new Error(error.message);
@@ -105,10 +107,14 @@ export async function togglePinNote(id: string, isPinned: boolean) {
 
 export async function deleteNote(id: string) {
   const supabase = await createClient();
-  const { error } = await supabase.from("notes").delete().eq("id", id);
+  const { error } = await supabase
+    .from("notes")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) return { error: error.message };
 
   revalidatePath("/notes");
   revalidatePath("/dashboard");
+  revalidatePath("/trash");
   return { success: true };
 }

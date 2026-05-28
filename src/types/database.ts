@@ -47,6 +47,7 @@ export interface Project {
   created_by: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
   client_id?: string | null;
   tags?: Tag[];
   task_count?: number;
@@ -74,6 +75,7 @@ export interface Task {
   created_by: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
   project?: Pick<Project, "id" | "title"> | null;
   assignee?: Pick<Profile, "id" | "full_name" | "email"> | null;
 }
@@ -87,6 +89,7 @@ export interface Note {
   created_by: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
   tags?: Tag[];
 }
 
@@ -96,6 +99,7 @@ export interface Update {
   project_id: string | null;
   author_id: string;
   created_at: string;
+  deleted_at?: string | null;
   author?: Pick<Profile, "id" | "full_name" | "email"> | null;
   project?: Pick<Project, "id" | "title"> | null;
 }
@@ -140,6 +144,7 @@ export interface Lead {
   created_by: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
   assignee?: Pick<Profile, "id" | "full_name" | "email"> | null;
   client?: Pick<Client, "id" | "name" | "company"> | null;
 }
@@ -161,6 +166,7 @@ export interface Client {
   created_by: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
   assignee?: Pick<Profile, "id" | "full_name" | "email"> | null;
   project_count?: number;
 }
@@ -197,6 +203,7 @@ export interface ClientFeedback {
   priority: PriorityLevel;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
   project?: Pick<Project, "id" | "title" | "status" | "progress"> | null;
   author?: Pick<Profile, "id" | "full_name" | "email"> | null;
 }

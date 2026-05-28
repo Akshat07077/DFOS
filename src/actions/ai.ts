@@ -9,10 +9,10 @@ async function buildWorkspaceContext() {
   const supabase = await createClient();
 
   const [projects, tasks, notes, updates] = await Promise.all([
-    supabase.from("projects").select("id, title, status, priority, deadline, description").limit(20),
-    supabase.from("tasks").select("id, title, status, priority, deadline, project_id, blockers").neq("status", "done").limit(30),
-    supabase.from("notes").select("id, title, content, summary").order("updated_at", { ascending: false }).limit(15),
-    supabase.from("updates").select("message, created_at, project_id").order("created_at", { ascending: false }).limit(20),
+    supabase.from("projects").select("id, title, status, priority, deadline, description").is("deleted_at", null).limit(20),
+    supabase.from("tasks").select("id, title, status, priority, deadline, project_id, blockers").is("deleted_at", null).neq("status", "done").limit(30),
+    supabase.from("notes").select("id, title, content, summary").is("deleted_at", null).order("updated_at", { ascending: false }).limit(15),
+    supabase.from("updates").select("message, created_at, project_id").is("deleted_at", null).order("created_at", { ascending: false }).limit(20),
   ]);
 
   return JSON.stringify(

@@ -94,11 +94,12 @@ export function TasksBoard({
   };
 
   const handleDelete = (id: string) => {
+    if (!confirm("Move this task to trash? You can restore it from Trash.")) return;
     startTransition(async () => {
       const result = await deleteTask(id);
       if (result?.error) toast.error(result.error);
       else {
-        toast.success("Task deleted");
+        toast.success("Task moved to trash");
         setTasks((prev) => prev.filter((t) => t.id !== id));
         router.refresh();
       }

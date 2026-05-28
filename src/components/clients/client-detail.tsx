@@ -47,7 +47,7 @@ export function ClientDetail({
   const handleDelete = () => {
     if (
       !confirm(
-        "Delete this client? Portal logins for this client will be removed. Linked projects will be unlinked."
+        "Move this client to trash? You can restore it from Trash. Portal logins are not removed."
       )
     ) {
       return;
@@ -56,7 +56,7 @@ export function ClientDetail({
       const result = await deleteClient(client.id);
       if (result?.error) toast.error(result.error);
       else {
-        toast.success("Client deleted");
+        toast.success("Client moved to trash");
         router.push("/clients");
       }
     });

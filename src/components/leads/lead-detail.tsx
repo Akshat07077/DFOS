@@ -40,12 +40,12 @@ export function LeadDetail({
   };
 
   const handleDelete = () => {
-    if (!confirm("Delete this lead?")) return;
+    if (!confirm("Move this lead to trash? You can restore it from Trash.")) return;
     startTransition(async () => {
       const result = await deleteLead(lead.id);
       if (result?.error) toast.error(result.error);
       else {
-        toast.success("Lead deleted");
+        toast.success("Lead moved to trash");
         router.push("/leads");
       }
     });

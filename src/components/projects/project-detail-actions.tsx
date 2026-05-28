@@ -22,7 +22,7 @@ export function ProjectDetailActions({
   const handleDelete = () => {
     if (
       !confirm(
-        `Delete project "${project.title}"? Tasks and updates linked to it will be removed.`
+        `Move project "${project.title}" to trash? Linked tasks and updates are hidden until you restore.`
       )
     ) {
       return;
@@ -32,7 +32,7 @@ export function ProjectDetailActions({
       const result = await deleteProject(project.id);
       if (result?.error) toast.error(result.error);
       else {
-        toast.success("Project deleted");
+        toast.success("Project moved to trash");
         router.push("/projects");
         router.refresh();
       }
@@ -54,7 +54,7 @@ export function ProjectDetailActions({
         disabled={pending}
       >
         <Trash2 className="h-4 w-4" />
-        Delete
+        Trash
       </Button>
     </div>
   );

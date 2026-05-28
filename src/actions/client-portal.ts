@@ -24,7 +24,8 @@ async function grantProjectAccess(
   const { data: projectRows, error: projectError } = await supabase
     .from("projects")
     .select("id")
-    .eq("client_id", clientId);
+    .eq("client_id", clientId)
+    .is("deleted_at", null);
   if (projectError) return { error: projectError.message };
 
   if (projectRows && projectRows.length > 0) {
@@ -63,6 +64,7 @@ export async function inviteClientPortalUser(formData: FormData) {
     .from("clients")
     .select("id")
     .eq("id", clientId)
+    .is("deleted_at", null)
     .single();
   if (!existingClient) return { error: "Client not found." };
 
@@ -200,17 +202,22 @@ export async function getClientFeedbackByClient(clientId: string) {
   assertFounderUserType(profile?.user_type);
 
   const supabase = await createClient();
+  const { data: projectRows } = await supabase
+    .from("projects")
+    .select("id")
+    .eq("client_id", clientId)
+    .is("deleted_at", null);
+
+  const projectIds = projectRows?.map((p) => p.id) ?? [];
+  if (projectIds.length === 0) return [];
+
   const { data, error } = await supabase
     .from("client_feedback")
     .select(
       "*, project:projects(id, title, status, progress), author:profiles(id, full_name, email)"
     )
-    .in(
-      "project_id",
-      (
-        await supabase.from("projects").select("id").eq("client_id", clientId)
-      ).data?.map((p) => p.id) ?? []
-    )
+    .in("project_id", projectIds)
+    .is("deleted_at", null)
     .order("updated_at", { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -254,23 +261,27 @@ export async function getClientPortalData() {
       .from("projects")
       .select("id, title, status, progress, deadline, updated_at")
       .in("id", projectIds)
+      .is("deleted_at", null)
       .order("updated_at", { ascending: false }),
     supabase
       .from("tasks")
       .select("id, title, status, priority, deadline, project:projects(id, title)")
       .in("project_id", projectIds)
+      .is("deleted_at", null)
       .order("deadline", { ascending: true })
       .limit(25),
     supabase
       .from("updates")
       .select("id, message, created_at, project:projects(id, title), author:profiles(id, full_name, email)")
       .in("project_id", projectIds)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(20),
     supabase
       .from("client_feedback")
       .select("*, project:projects(id, title), author:profiles(id, full_name, email)")
       .in("project_id", projectIds)
+      .is("deleted_at", null)
       .order("updated_at", { ascending: false })
       .limit(30),
   ]);

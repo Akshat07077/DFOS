@@ -12,6 +12,7 @@ import {
   Radio,
   Sparkles,
   Download,
+  Trash2,
   LogOut,
   Command,
   X,
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/updates", label: "Updates", icon: Radio },
   { href: "/ai", label: "AI", icon: Sparkles },
   { href: "/backup", label: "Backup", icon: Download },
+  { href: "/trash", label: "Trash", icon: Trash2 },
 ];
 
 export function Sidebar({

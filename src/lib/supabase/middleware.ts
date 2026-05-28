@@ -60,6 +60,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/updates") ||
     request.nextUrl.pathname.startsWith("/ai") ||
     request.nextUrl.pathname.startsWith("/backup") ||
+    request.nextUrl.pathname.startsWith("/trash") ||
     isClientPortalRoute;
 
   if (!user && isProtected) {
@@ -86,7 +87,8 @@ export async function updateSession(request: NextRequest) {
       request.nextUrl.pathname.startsWith("/notes") ||
       request.nextUrl.pathname.startsWith("/updates") ||
       request.nextUrl.pathname.startsWith("/ai") ||
-      request.nextUrl.pathname.startsWith("/backup");
+      request.nextUrl.pathname.startsWith("/backup") ||
+      request.nextUrl.pathname.startsWith("/trash");
 
     if (clientAccount && isFounderPath) {
       const url = request.nextUrl.clone();

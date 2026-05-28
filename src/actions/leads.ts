@@ -15,7 +15,11 @@ export async function getLeads(filters?: {
   assignedTo?: string;
 }) {
   const supabase = await createClient();
-  let query = supabase.from("leads").select(leadSelect).order("updated_at", { ascending: false });
+  let query = supabase
+    .from("leads")
+    .select(leadSelect)
+    .is("deleted_at", null)
+    .order("updated_at", { ascending: false });
 
   if (filters?.status) query = query.eq("status", filters.status);
   if (filters?.assignedTo) query = query.eq("assigned_to", filters.assignedTo);
@@ -27,7 +31,12 @@ export async function getLeads(filters?: {
 
 export async function getLead(id: string) {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("leads").select(leadSelect).eq("id", id).single();
+  const { data, error } = await supabase
+    .from("leads")
+    .select(leadSelect)
+    .eq("id", id)
+    .is("deleted_at", null)
+    .single();
   if (error) throw new Error(error.message);
   return data;
 }
@@ -119,11 +128,15 @@ export async function updateLeadStatus(id: string, status: LeadStatus) {
 
 export async function deleteLead(id: string) {
   const supabase = await createClient();
-  const { error } = await supabase.from("leads").delete().eq("id", id);
+  const { error } = await supabase
+    .from("leads")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) return { error: error.message };
 
   revalidatePath("/leads");
   revalidatePath("/dashboard");
+  revalidatePath("/trash");
   return { success: true };
 }
 

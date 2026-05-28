@@ -12,6 +12,7 @@ export async function getUpdates(projectId?: string) {
       author:profiles!updates_author_id_fkey(id, full_name, email),
       project:projects(id, title)
     `)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -71,10 +72,14 @@ export async function updateUpdate(id: string, formData: FormData) {
 
 export async function deleteUpdate(id: string) {
   const supabase = await createClient();
-  const { error } = await supabase.from("updates").delete().eq("id", id);
+  const { error } = await supabase
+    .from("updates")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) return { error: error.message };
 
   revalidatePath("/updates");
   revalidatePath("/dashboard");
+  revalidatePath("/trash");
   return { success: true };
 }

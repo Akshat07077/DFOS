@@ -39,7 +39,7 @@ export function ClientsView({
   const handleDelete = (client: Client) => {
     if (
       !confirm(
-        `Delete client "${client.company}"? Linked projects stay but unlink. Portal logins for this client are removed.`
+        `Move client "${client.company}" to trash? You can restore it from Trash. Portal logins stay active.`
       )
     ) {
       return;
@@ -49,7 +49,7 @@ export function ClientsView({
       const result = await deleteClient(client.id);
       if (result?.error) toast.error(result.error);
       else {
-        toast.success("Client deleted");
+        toast.success("Client moved to trash");
         router.refresh();
       }
     });

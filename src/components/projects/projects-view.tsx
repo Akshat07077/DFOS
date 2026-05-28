@@ -35,13 +35,13 @@ export function ProjectsView({
   const handleDelete = (project: Project, e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
-    if (!confirm(`Delete project "${project.title}"? This cannot be undone.`)) return;
+    if (!confirm(`Move project "${project.title}" to trash? You can restore it from Trash.`)) return;
 
     startTransition(async () => {
       const result = await deleteProject(project.id);
       if (result?.error) toast.error(result.error);
       else {
-        toast.success("Project deleted");
+        toast.success("Project moved to trash");
         router.refresh();
       }
     });

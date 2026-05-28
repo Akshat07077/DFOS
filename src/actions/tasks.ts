@@ -18,6 +18,7 @@ export async function getTasks(filters?: {
       project:projects(id, title),
       assignee:profiles!tasks_assigned_to_fkey(id, full_name, email)
     `)
+    .is("deleted_at", null)
     .order("position", { ascending: true });
 
   if (filters?.projectId) query = query.eq("project_id", filters.projectId);
@@ -38,6 +39,7 @@ export async function getTodayTasks() {
   const { data, error } = await supabase
     .from("tasks")
     .select(`*, project:projects(id, title)`)
+    .is("deleted_at", null)
     .neq("status", "done")
     .lte("deadline", today.toISOString())
     .order("deadline", { ascending: true });
@@ -53,6 +55,7 @@ export async function getOverdueTasks() {
   const { data, error } = await supabase
     .from("tasks")
     .select(`*, project:projects(id, title)`)
+    .is("deleted_at", null)
     .neq("status", "done")
     .lt("deadline", now)
     .order("deadline", { ascending: true });
@@ -126,10 +129,14 @@ export async function updateTaskStatus(id: string, status: TaskStatus) {
 
 export async function deleteTask(id: string) {
   const supabase = await createClient();
-  const { error } = await supabase.from("tasks").delete().eq("id", id);
+  const { error } = await supabase
+    .from("tasks")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) return { error: error.message };
 
   revalidatePath("/tasks");
   revalidatePath("/dashboard");
+  revalidatePath("/trash");
   return { success: true };
 }

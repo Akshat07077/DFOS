@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getUser } from "@/lib/supabase/server";
 import type { ClientStatus, PriorityLevel } from "@/types/database";
 
@@ -15,7 +14,11 @@ export async function getClients(filters?: {
   assignedTo?: string;
 }) {
   const supabase = await createClient();
-  let query = supabase.from("clients").select(clientSelect).order("updated_at", { ascending: false });
+  let query = supabase
+    .from("clients")
+    .select(clientSelect)
+    .is("deleted_at", null)
+    .order("updated_at", { ascending: false });
 
   if (filters?.status) query = query.eq("status", filters.status);
   if (filters?.assignedTo) query = query.eq("assigned_to", filters.assignedTo);
@@ -27,13 +30,19 @@ export async function getClients(filters?: {
 
 export async function getClient(id: string) {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("clients").select(clientSelect).eq("id", id).single();
+  const { data, error } = await supabase
+    .from("clients")
+    .select(clientSelect)
+    .eq("id", id)
+    .is("deleted_at", null)
+    .single();
   if (error) throw new Error(error.message);
 
   const { count } = await supabase
     .from("projects")
     .select("id", { count: "exact", head: true })
-    .eq("client_id", id);
+    .eq("client_id", id)
+    .is("deleted_at", null);
 
   return { ...data, project_count: count ?? 0 };
 }
@@ -124,28 +133,16 @@ export async function updateClientStatus(id: string, status: ClientStatus) {
 export async function deleteClient(id: string) {
   const supabase = await createClient();
 
-  try {
-    const admin = createAdminClient();
-    const { data: portalUsers } = await admin
-      .from("profiles")
-      .select("id, user_type")
-      .eq("portal_client_id", id)
-      .eq("user_type", "client");
+  const { error } = await supabase
+    .from("clients")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
 
-    for (const user of portalUsers ?? []) {
-      if (user.user_type !== "client") continue;
-      await admin.auth.admin.deleteUser(user.id);
-    }
-  } catch {
-    // Service role missing — client row still deletes; clean auth users manually if needed
-  }
-
-  const { error } = await supabase.from("clients").delete().eq("id", id);
   if (error) return { error: error.message };
 
   revalidatePath("/clients");
   revalidatePath("/dashboard");
-  revalidatePath("/client");
+  revalidatePath("/trash");
   return { success: true };
 }
 
@@ -187,6 +184,7 @@ export async function getClientProjects(clientId: string) {
     .from("projects")
     .select("id, title, status, priority, deadline, progress")
     .eq("client_id", clientId)
+    .is("deleted_at", null)
     .order("updated_at", { ascending: false });
 
   if (error) throw new Error(error.message);
