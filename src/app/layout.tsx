@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DesignsVerse FOS — Founder Operating System",
+  title: "FOS — Founder Operating System",
   description: "Internal productivity cockpit for DesignsVerse founders",
 };
 

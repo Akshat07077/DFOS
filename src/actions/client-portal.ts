@@ -47,7 +47,7 @@ export async function inviteClientPortalUser(formData: FormData) {
 
   const userId = createRes.data.user.id;
 
-  const { error: profileError } = await supabase.from("profiles").upsert(
+  const { error: profileError } = await admin.from("profiles").upsert(
     {
       id: userId,
       email,
