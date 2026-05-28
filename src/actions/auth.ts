@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getPostLoginPath, isClientAccount } from "@/lib/auth/account-type";
 import { createClient } from "@/lib/supabase/server";
 
 export async function signIn(formData: FormData) {
@@ -23,10 +24,20 @@ export async function signIn(formData: FormData) {
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("user_type")
+      .select("user_type, portal_client_id")
       .eq("id", user.id)
       .single();
-    redirect(profile?.user_type === "client" ? "/client" : "/dashboard");
+
+    // Self-heal: linked client users must not stay on founder type
+    if (profile?.portal_client_id && profile.user_type !== "client") {
+      await supabase
+        .from("profiles")
+        .update({ user_type: "client", role: null })
+        .eq("id", user.id);
+      redirect("/client");
+    }
+
+    redirect(getPostLoginPath(profile));
   }
 
   redirect("/dashboard");

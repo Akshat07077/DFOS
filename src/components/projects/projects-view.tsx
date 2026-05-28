@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { LayoutGrid, List, Columns3, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { LayoutGrid, List, Columns3, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { deleteProject } from "@/actions/projects";
 import { ProjectFormDialog } from "@/components/projects/project-form-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -22,10 +25,27 @@ export function ProjectsView({
   projects: Project[];
   clients: Pick<Client, "id" | "company">[];
 }) {
+  const router = useRouter();
   const [view, setView] = useState<ViewMode>("grid");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
 
   const statuses = Object.keys(PROJECT_STATUS_LABELS) as ProjectStatus[];
+
+  const handleDelete = (project: Project, e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    if (!confirm(`Delete project "${project.title}"? This cannot be undone.`)) return;
+
+    startTransition(async () => {
+      const result = await deleteProject(project.id);
+      if (result?.error) toast.error(result.error);
+      else {
+        toast.success("Project deleted");
+        router.refresh();
+      }
+    });
+  };
 
   return (
     <div className="animate-fade-in">
@@ -77,7 +97,13 @@ export function ProjectsView({
               </h3>
               <div className="space-y-2 min-h-[120px]">
                 {projects.filter((p) => p.status === status).map((project) => (
-                  <ProjectCard key={project.id} project={project} compact />
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    compact
+                    pending={pending}
+                    onDelete={handleDelete}
+                  />
                 ))}
               </div>
             </div>
@@ -86,26 +112,40 @@ export function ProjectsView({
       ) : view === "list" ? (
         <div className="space-y-2">
           {projects.map((project) => (
-            <Link
+            <div
               key={project.id}
-              href={`/projects/${project.id}`}
-              className="flex items-center justify-between rounded-xl border border-border p-4 transition-colors hover:bg-accent/30"
+              className="flex items-center justify-between gap-3 rounded-xl border border-border p-4 transition-colors hover:bg-accent/30"
             >
-              <div>
+              <Link href={`/projects/${project.id}`} className="min-w-0 flex-1">
                 <p className="font-medium">{project.title}</p>
                 <p className="text-sm text-muted-foreground line-clamp-1">{project.description}</p>
-              </div>
-              <div className="flex items-center gap-2">
+              </Link>
+              <div className="flex items-center gap-2 shrink-0">
                 <ProjectStatusBadge status={project.status} />
                 <PriorityBadge priority={project.priority} />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  aria-label="Delete project"
+                  disabled={pending}
+                  onClick={(e) => handleDelete(project, e)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard
+              key={project.id}
+              project={project}
+              pending={pending}
+              onDelete={handleDelete}
+            />
           ))}
         </div>
       )}
@@ -113,11 +153,34 @@ export function ProjectsView({
   );
 }
 
-function ProjectCard({ project, compact }: { project: Project; compact?: boolean }) {
+function ProjectCard({
+  project,
+  compact,
+  pending,
+  onDelete,
+}: {
+  project: Project;
+  compact?: boolean;
+  pending?: boolean;
+  onDelete: (project: Project, e?: React.MouseEvent) => void;
+}) {
   return (
-    <Link href={`/projects/${project.id}`}>
-      <Card className={cn("transition-all hover:border-primary/30 hover:shadow-md h-full", compact && "text-sm")}>
-        <CardHeader className={compact ? "p-3 pb-0" : undefined}>
+    <Card className={cn("relative transition-all hover:border-primary/30 hover:shadow-md h-full", compact && "text-sm")}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className={cn(
+          "absolute right-2 top-2 z-10 h-7 w-7 text-muted-foreground hover:text-destructive",
+          compact && "h-6 w-6"
+        )}
+        aria-label="Delete project"
+        disabled={pending}
+        onClick={(e) => onDelete(project, e)}
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
+      <Link href={`/projects/${project.id}`}>
+        <CardHeader className={compact ? "p-3 pb-0 pr-10" : "pr-10"}>
           <div className="flex items-start justify-between gap-2">
             <CardTitle className={cn("line-clamp-1", compact ? "text-sm" : "text-base")}>
               {project.title}
@@ -144,7 +207,7 @@ function ProjectCard({ project, compact }: { project: Project; compact?: boolean
             />
           </div>
         </CardContent>
-      </Card>
-    </Link>
+      </Link>
+    </Card>
   );
 }

@@ -5,7 +5,7 @@ import { getProject } from "@/actions/projects";
 import { getClients } from "@/actions/clients";
 import { getTasks } from "@/actions/tasks";
 import { getUpdates } from "@/actions/updates";
-import { ProjectFormDialog } from "@/components/projects/project-form-dialog";
+import { ProjectDetailActions } from "@/components/projects/project-detail-actions";
 import { ProjectStatusBadge, PriorityBadge, TaskStatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,11 +49,7 @@ export default async function ProjectDetailPage({
             )}
           </div>
         </div>
-        <ProjectFormDialog
-          project={project}
-          clients={clients}
-          trigger={<Button variant="outline" size="sm">Edit</Button>}
-        />
+        <ProjectDetailActions project={project} clients={clients} />
       </div>
 
       {project.description && (

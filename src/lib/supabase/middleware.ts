@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isClientAccount } from "@/lib/auth/account-type";
 import { assertSupabaseEnv, supabaseKey, supabaseUrl } from "@/lib/supabase/env";
 
 export function createClient(request: NextRequest) {
@@ -43,10 +44,12 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const pathname = request.nextUrl.pathname;
   const isAuthRoute =
-    request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/signup");
-  const isClientRoute = request.nextUrl.pathname.startsWith("/client");
+    pathname.startsWith("/login") || pathname.startsWith("/signup");
+  // Must NOT use startsWith("/client") — that wrongly matches "/clients"
+  const isClientPortalRoute =
+    pathname === "/client" || pathname.startsWith("/client/");
   const isProtected =
     request.nextUrl.pathname.startsWith("/dashboard") ||
     request.nextUrl.pathname.startsWith("/leads") ||
@@ -56,7 +59,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/notes") ||
     request.nextUrl.pathname.startsWith("/updates") ||
     request.nextUrl.pathname.startsWith("/ai") ||
-    isClientRoute;
+    isClientPortalRoute;
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
@@ -64,15 +67,42 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Keep role-specific redirects in route layouts to avoid
-  // accidental middleware redirects from stale profile lookups.
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("user_type, portal_client_id")
+      .eq("id", user.id)
+      .single();
 
-  if (user && isAuthRoute) {
-    const url = request.nextUrl.clone();
-    // Send authenticated users to a stable entrypoint;
-    // layout guards will forward clients to /client.
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
+    const clientAccount = isClientAccount(profile);
+
+    const isFounderPath =
+      request.nextUrl.pathname.startsWith("/dashboard") ||
+      request.nextUrl.pathname.startsWith("/leads") ||
+      request.nextUrl.pathname.startsWith("/clients") ||
+      request.nextUrl.pathname.startsWith("/projects") ||
+      request.nextUrl.pathname.startsWith("/tasks") ||
+      request.nextUrl.pathname.startsWith("/notes") ||
+      request.nextUrl.pathname.startsWith("/updates") ||
+      request.nextUrl.pathname.startsWith("/ai");
+
+    if (clientAccount && isFounderPath) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/client";
+      return NextResponse.redirect(url);
+    }
+
+    if (!clientAccount && isClientPortalRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
+
+    if (isAuthRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = clientAccount ? "/client" : "/dashboard";
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

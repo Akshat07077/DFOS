@@ -45,7 +45,13 @@ export function ClientDetail({
   const [pending, startTransition] = useTransition();
 
   const handleDelete = () => {
-    if (!confirm("Delete this client?")) return;
+    if (
+      !confirm(
+        "Delete this client? Portal logins for this client will be removed. Linked projects will be unlinked."
+      )
+    ) {
+      return;
+    }
     startTransition(async () => {
       const result = await deleteClient(client.id);
       if (result?.error) toast.error(result.error);
@@ -72,7 +78,7 @@ export function ClientDetail({
       const result = await inviteClientPortalUser(formData);
       if (result?.error) toast.error(result.error);
       else {
-        toast.success("Client portal user created");
+        toast.success(result.message ?? "Client portal user saved");
         router.refresh();
       }
     });
@@ -172,8 +178,8 @@ export function ClientDetail({
         <CardContent className="space-y-4">
           {projects.length === 0 && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
-              Link at least one project to this client first. Portal users and access are mapped
-              through linked projects.
+              No projects linked yet. You can still create login credentials, but the client portal
+              will stay empty until you link at least one project.
             </div>
           )}
           <form action={handlePortalInvite} className="space-y-3">
@@ -199,9 +205,10 @@ export function ClientDetail({
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Access is automatically granted to all projects currently linked to this client.
+              Access is automatically granted to all projects linked to this client. If the email
+              already exists, submitting again with a password will link that account here.
             </p>
-            <Button type="submit" size="sm" disabled={pending || projects.length === 0}>
+            <Button type="submit" size="sm" disabled={pending}>
               {pending ? "Creating..." : "Create Client Login"}
             </Button>
           </form>

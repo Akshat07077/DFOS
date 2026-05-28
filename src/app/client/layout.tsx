@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signOut } from "@/actions/auth";
+import { isClientAccount } from "@/lib/auth/account-type";
 import { getProfile, getUser } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 
@@ -13,7 +14,7 @@ export default async function ClientLayout({
   const profile = await getProfile();
 
   if (!user) redirect("/login");
-  if (profile?.user_type !== "client") redirect("/dashboard");
+  if (!isClientAccount(profile)) redirect("/dashboard");
 
   return (
     <div className="min-h-screen bg-background">

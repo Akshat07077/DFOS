@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getUser } from "@/lib/supabase/server";
 import type { ClientStatus, PriorityLevel } from "@/types/database";
 
@@ -122,11 +123,27 @@ export async function updateClientStatus(id: string, status: ClientStatus) {
 
 export async function deleteClient(id: string) {
   const supabase = await createClient();
+
+  try {
+    const admin = createAdminClient();
+    const { data: portalUsers } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("portal_client_id", id);
+
+    for (const user of portalUsers ?? []) {
+      await admin.auth.admin.deleteUser(user.id);
+    }
+  } catch {
+    // Service role missing — client row still deletes; clean auth users manually if needed
+  }
+
   const { error } = await supabase.from("clients").delete().eq("id", id);
   if (error) return { error: error.message };
 
   revalidatePath("/clients");
   revalidatePath("/dashboard");
+  revalidatePath("/client");
   return { success: true };
 }
 

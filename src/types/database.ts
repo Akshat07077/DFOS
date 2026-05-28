@@ -22,8 +22,9 @@ export interface Profile {
   email: string;
   full_name: string | null;
   avatar_url: string | null;
-  role: FounderRole;
+  role: FounderRole | null;
   user_type?: UserType;
+  portal_client_id?: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -1,7 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  createAdminClient,
+  getAuthUserByEmail,
+  linkClientPortalProfile,
+} from "@/lib/supabase/admin";
 import { createClient, getProfile, getUser } from "@/lib/supabase/server";
 import type { FeedbackStatus, PriorityLevel } from "@/types/database";
 
@@ -11,53 +15,12 @@ function assertFounderUserType(userType?: string) {
   }
 }
 
-export async function inviteClientPortalUser(formData: FormData) {
-  const founder = await getProfile();
-  assertFounderUserType(founder?.user_type);
-
-  const supabase = await createClient();
-  const admin = createAdminClient();
-
-  const clientId = formData.get("client_id") as string;
-  const fullName = (formData.get("full_name") as string)?.trim();
-  const email = (formData.get("email") as string)?.trim().toLowerCase();
-  const password = formData.get("password") as string;
-
-  if (!clientId || !email || !password) {
-    return { error: "Client, email, and password are required." };
-  }
-
-  const { data: existingClient } = await supabase
-    .from("clients")
-    .select("id")
-    .eq("id", clientId)
-    .single();
-  if (!existingClient) return { error: "Client not found." };
-
-  const createRes = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: fullName ?? null },
-  });
-
-  if (createRes.error || !createRes.data.user) {
-    return { error: createRes.error?.message ?? "Unable to create user" };
-  }
-
-  const userId = createRes.data.user.id;
-
-  const { error: profileError } = await admin.from("profiles").upsert(
-    {
-      id: userId,
-      email,
-      full_name: fullName || null,
-      user_type: "client",
-    },
-    { onConflict: "id" }
-  );
-  if (profileError) return { error: profileError.message };
-
+async function grantProjectAccess(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  clientId: string,
+  founderId: string
+) {
   const { data: projectRows, error: projectError } = await supabase
     .from("projects")
     .select("id")
@@ -70,15 +33,130 @@ export async function inviteClientPortalUser(formData: FormData) {
         client_profile_id: userId,
         client_id: clientId,
         project_id: p.id,
-        created_by: founder!.id,
+        created_by: founderId,
       })),
       { onConflict: "client_profile_id,project_id" }
     );
     if (accessError) return { error: accessError.message };
   }
 
+  return { success: true as const };
+}
+
+export async function inviteClientPortalUser(formData: FormData) {
+  const founder = await getProfile();
+  assertFounderUserType(founder?.user_type);
+
+  const supabase = await createClient();
+  const admin = createAdminClient();
+
+  const clientId = formData.get("client_id") as string;
+  const fullName = (formData.get("full_name") as string)?.trim();
+  const email = (formData.get("email") as string)?.trim().toLowerCase();
+  const password = (formData.get("password") as string) || undefined;
+
+  if (!clientId || !email) {
+    return { error: "Client and email are required." };
+  }
+
+  const { data: existingClient } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("id", clientId)
+    .single();
+  if (!existingClient) return { error: "Client not found." };
+
+  const { data: existingProfile } = await admin
+    .from("profiles")
+    .select("id, user_type, portal_client_id")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (existingProfile?.user_type === "founder") {
+    return {
+      error:
+        "This email belongs to a founder account. Use a different email for the client portal.",
+    };
+  }
+
+  if (existingProfile?.portal_client_id === clientId) {
+    return { success: true, message: "This user is already linked to this client." };
+  }
+
+  let userId = existingProfile?.id;
+
+  if (!userId) {
+    const authUser = await getAuthUserByEmail(email);
+    userId = authUser?.id;
+  }
+
+  if (userId) {
+    if (!password) {
+      return {
+        error:
+          "This email is already registered. Enter a new temporary password to link and reset access.",
+      };
+    }
+
+    const linkResult = await linkClientPortalProfile(admin, {
+      userId,
+      email,
+      fullName: fullName || null,
+      clientId,
+      password,
+    });
+    if (linkResult.error) return { error: linkResult.error };
+
+    const accessResult = await grantProjectAccess(supabase, userId, clientId, founder!.id);
+    if (accessResult.error) return { error: accessResult.error };
+
+    revalidatePath(`/clients/${clientId}`);
+    return {
+      success: true,
+      message: "Existing account linked to this client. They can log in with the new password.",
+    };
+  }
+
+  if (!password) {
+    return { error: "Password is required for new client logins." };
+  }
+
+  const createRes = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: {
+      full_name: fullName ?? null,
+      user_type: "client",
+    },
+  });
+
+  if (createRes.error || !createRes.data.user) {
+    const msg = createRes.error?.message ?? "Unable to create user";
+    if (msg.toLowerCase().includes("already")) {
+      return {
+        error:
+          "This email is already registered in Auth. Enter a password and submit again to link the existing account.",
+      };
+    }
+    return { error: msg };
+  }
+
+  userId = createRes.data.user.id;
+
+  const linkResult = await linkClientPortalProfile(admin, {
+    userId,
+    email,
+    fullName: fullName || null,
+    clientId,
+  });
+  if (linkResult.error) return { error: linkResult.error };
+
+  const accessResult = await grantProjectAccess(supabase, userId, clientId, founder!.id);
+  if (accessResult.error) return { error: accessResult.error };
+
   revalidatePath(`/clients/${clientId}`);
-  return { success: true };
+  return { success: true, message: "Client login created successfully." };
 }
 
 export async function getClientPortalUsers(clientId: string) {
@@ -86,20 +164,34 @@ export async function getClientPortalUsers(clientId: string) {
   assertFounderUserType(profile?.user_type);
 
   const supabase = await createClient();
-  const { data, error } = await supabase
+
+  const { data: directUsers, error: directError } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .eq("user_type", "client")
+    .eq("portal_client_id", clientId)
+    .order("created_at", { ascending: false });
+  if (directError) throw new Error(directError.message);
+
+  const users = new Map<string, { id: string; full_name: string | null; email: string }>();
+  for (const row of directUsers ?? []) {
+    users.set(row.id, row);
+  }
+
+  const { data: accessRows, error: accessError } = await supabase
     .from("client_project_access")
     .select(
       "client_profile_id, profile:profiles!client_project_access_client_profile_id_fkey(id, full_name, email)"
     )
     .eq("client_id", clientId);
-  if (error) throw new Error(error.message);
+  if (accessError) throw new Error(accessError.message);
 
-  const users = new Map<string, { id: string; full_name: string | null; email: string }>();
-  for (const row of data ?? []) {
+  for (const row of accessRows ?? []) {
     const profileRow = Array.isArray(row.profile) ? row.profile[0] : row.profile;
     if (!profileRow || users.has(profileRow.id)) continue;
     users.set(profileRow.id, profileRow);
   }
+
   return Array.from(users.values());
 }
 

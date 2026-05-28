@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Building2, LayoutGrid, List, Pencil, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Building2, LayoutGrid, List, Pencil, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { deleteClient } from "@/actions/clients";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -21,15 +24,36 @@ export function ClientsView({
   clients: Client[];
   profiles: Pick<Profile, "id" | "full_name" | "email">[];
 }) {
+  const router = useRouter();
   const [view, setView] = useState<ViewMode>("grid");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<ClientStatus | "all">("all");
+  const [pending, startTransition] = useTransition();
 
   const filtered =
     filterStatus === "all" ? clients : clients.filter((c) => c.status === filterStatus);
 
   const activeCount = clients.filter((c) => c.status === "active" || c.status === "onboarding").length;
   const totalValue = clients.reduce((sum, c) => sum + (Number(c.contract_value) || 0), 0);
+
+  const handleDelete = (client: Client) => {
+    if (
+      !confirm(
+        `Delete client "${client.company}"? Linked projects stay but unlink. Portal logins for this client are removed.`
+      )
+    ) {
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await deleteClient(client.id);
+      if (result?.error) toast.error(result.error);
+      else {
+        toast.success("Client deleted");
+        router.refresh();
+      }
+    });
+  };
 
   return (
     <div className="animate-fade-in">
@@ -92,6 +116,16 @@ export function ClientsView({
                     </Button>
                   }
                 />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  aria-label="Delete client"
+                  disabled={pending}
+                  onClick={() => handleDelete(client)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
               </div>
             </div>
           ))}
@@ -120,6 +154,16 @@ export function ClientsView({
                         </Button>
                       }
                     />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      aria-label="Delete client"
+                      disabled={pending}
+                      onClick={() => handleDelete(client)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 </div>
                 <Link href={`/clients/${client.id}`}>
