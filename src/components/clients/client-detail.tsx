@@ -170,6 +170,12 @@ export function ClientDetail({
           <CardTitle className="text-base">Client Portal Access</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {projects.length === 0 && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
+              Link at least one project to this client first. Portal users and access are mapped
+              through linked projects.
+            </div>
+          )}
           <form action={handlePortalInvite} className="space-y-3">
             <input type="hidden" name="client_id" value={client.id} />
             <div className="grid gap-3 sm:grid-cols-2">
@@ -195,7 +201,7 @@ export function ClientDetail({
             <p className="text-xs text-muted-foreground">
               Access is automatically granted to all projects currently linked to this client.
             </p>
-            <Button type="submit" size="sm" disabled={pending}>
+            <Button type="submit" size="sm" disabled={pending || projects.length === 0}>
               {pending ? "Creating..." : "Create Client Login"}
             </Button>
           </form>
