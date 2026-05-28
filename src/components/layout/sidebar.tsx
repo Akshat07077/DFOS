@@ -11,6 +11,7 @@ import {
   StickyNote,
   Radio,
   Sparkles,
+  Download,
   LogOut,
   Command,
   X,
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/notes", label: "Notes", icon: StickyNote },
   { href: "/updates", label: "Updates", icon: Radio },
   { href: "/ai", label: "AI", icon: Sparkles },
+  { href: "/backup", label: "Backup", icon: Download },
 ];
 
 export function Sidebar({

@@ -128,10 +128,12 @@ export async function deleteClient(id: string) {
     const admin = createAdminClient();
     const { data: portalUsers } = await admin
       .from("profiles")
-      .select("id")
-      .eq("portal_client_id", id);
+      .select("id, user_type")
+      .eq("portal_client_id", id)
+      .eq("user_type", "client");
 
     for (const user of portalUsers ?? []) {
+      if (user.user_type !== "client") continue;
       await admin.auth.admin.deleteUser(user.id);
     }
   } catch {

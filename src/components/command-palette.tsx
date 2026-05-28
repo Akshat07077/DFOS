@@ -11,6 +11,7 @@ import {
   StickyNote,
   Radio,
   Sparkles,
+  Download,
   Plus,
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -24,6 +25,7 @@ const pages = [
   { href: "/notes", label: "Notes", icon: StickyNote },
   { href: "/updates", label: "Updates", icon: Radio },
   { href: "/ai", label: "AI Assistant", icon: Sparkles },
+  { href: "/backup", label: "Database Backup", icon: Download },
 ];
 
 const quickActions = [
