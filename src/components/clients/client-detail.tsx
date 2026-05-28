@@ -6,24 +6,40 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ExternalLink, FolderKanban, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteClient, addClientActivity } from "@/actions/clients";
+import {
+  inviteClientPortalUser,
+  updateClientFeedbackStatus,
+} from "@/actions/client-portal";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
 import { ClientStatusBadge, PriorityBadge, ProjectStatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import type { Client, ClientActivity, Profile, Project, ProjectStatus } from "@/types/database";
+import type {
+  Client,
+  ClientActivity,
+  ClientFeedback,
+  FeedbackStatus,
+  Profile,
+  Project,
+} from "@/types/database";
 
 export function ClientDetail({
   client,
   activities,
   projects,
   profiles,
+  portalUsers,
+  feedback,
 }: {
   client: Client & { project_count?: number };
   activities: ClientActivity[];
   projects: Array<Pick<Project, "id" | "title" | "status" | "progress">>;
   profiles: Pick<Profile, "id" | "full_name" | "email">[];
+  portalUsers: Array<{ id: string; full_name: string | null; email: string }>;
+  feedback: ClientFeedback[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -46,6 +62,28 @@ export function ClientDetail({
       if (result?.error) toast.error(result.error);
       else {
         toast.success("Activity logged");
+        router.refresh();
+      }
+    });
+  };
+
+  const handlePortalInvite = (formData: FormData) => {
+    startTransition(async () => {
+      const result = await inviteClientPortalUser(formData);
+      if (result?.error) toast.error(result.error);
+      else {
+        toast.success("Client portal user created");
+        router.refresh();
+      }
+    });
+  };
+
+  const handleFeedbackStatus = (id: string, status: FeedbackStatus) => {
+    startTransition(async () => {
+      const result = await updateClientFeedbackStatus(id, status);
+      if (result?.error) toast.error(result.error);
+      else {
+        toast.success("Feedback status updated");
         router.refresh();
       }
     });
@@ -128,6 +166,57 @@ export function ClientDetail({
       </Card>
 
       <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Client Portal Access</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <form action={handlePortalInvite} className="space-y-3">
+            <input type="hidden" name="client_id" value={client.id} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="full_name">Full name</Label>
+                <Input id="full_name" name="full_name" placeholder="Client contact name" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Login email</Label>
+                <Input id="email" type="email" name="email" required />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Temporary password</Label>
+              <Input
+                id="password"
+                type="text"
+                name="password"
+                required
+                placeholder="Set and share securely"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Access is automatically granted to all projects currently linked to this client.
+            </p>
+            <Button type="submit" size="sm" disabled={pending}>
+              {pending ? "Creating..." : "Create Client Login"}
+            </Button>
+          </form>
+
+          <div className="space-y-2 border-t border-border pt-4">
+            <p className="text-sm font-medium">Existing portal users</p>
+            {portalUsers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No portal users yet.</p>
+            ) : (
+              portalUsers.map((user) => (
+                <div key={user.id} className="rounded-lg border border-border p-3">
+                  <p className="text-sm font-medium">{user.full_name ?? "Client user"}</p>
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader><CardTitle className="text-base">Activity</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <form action={handleActivity} className="space-y-3">
@@ -155,6 +244,41 @@ export function ClientDetail({
               ))
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Client Feedback / Bugs</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {feedback.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No feedback submitted by client yet.</p>
+          ) : (
+            feedback.map((item) => (
+              <div key={item.id} className="rounded-lg border border-border p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium">{item.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.project?.title ?? "Project"} · {item.author?.full_name ?? item.author?.email ?? "Client"}
+                    </p>
+                  </div>
+                  <select
+                    value={item.status}
+                    className="h-8 rounded-lg border border-input bg-background px-2 text-xs"
+                    onChange={(e) => handleFeedbackStatus(item.id, e.target.value as FeedbackStatus)}
+                  >
+                    <option value="new">New</option>
+                    <option value="triaged">Triaged</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="done">Done</option>
+                  </select>
+                </div>
+                <p className="mt-2 text-sm">{item.description}</p>
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
     </div>

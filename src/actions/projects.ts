@@ -53,6 +53,7 @@ export async function createProject(formData: FormData) {
   const status = (formData.get("status") as ProjectStatus) || "planning";
   const priority = (formData.get("priority") as PriorityLevel) || "medium";
   const deadline = (formData.get("deadline") as string) || null;
+  const clientId = (formData.get("client_id") as string) || null;
 
   const { data, error } = await supabase
     .from("projects")
@@ -62,12 +63,32 @@ export async function createProject(formData: FormData) {
       status,
       priority,
       deadline: deadline || null,
+      client_id: clientId,
       created_by: user.id,
     })
     .select()
     .single();
 
   if (error) return { error: error.message };
+
+  if (clientId) {
+    const { data: clientUsers } = await supabase
+      .from("client_project_access")
+      .select("client_profile_id")
+      .eq("client_id", clientId);
+
+    if (clientUsers && clientUsers.length > 0) {
+      await supabase.from("client_project_access").upsert(
+        clientUsers.map((row) => ({
+          client_profile_id: row.client_profile_id,
+          client_id: clientId,
+          project_id: data.id,
+          created_by: user.id,
+        })),
+        { onConflict: "client_profile_id,project_id" }
+      );
+    }
+  }
 
   revalidatePath("/projects");
   revalidatePath("/dashboard");
@@ -84,11 +105,35 @@ export async function updateProject(id: string, formData: FormData) {
     priority: formData.get("priority") as PriorityLevel,
     deadline: (formData.get("deadline") as string) || null,
     progress: parseInt(formData.get("progress") as string) || 0,
+    client_id: (formData.get("client_id") as string) || null,
   };
 
   const { error } = await supabase.from("projects").update(updates).eq("id", id);
 
   if (error) return { error: error.message };
+
+  const clientId = (updates.client_id as string | null) ?? null;
+  if (clientId) {
+    const user = await getUser();
+    if (user) {
+      const { data: clientUsers } = await supabase
+        .from("client_project_access")
+        .select("client_profile_id")
+        .eq("client_id", clientId);
+
+      if (clientUsers && clientUsers.length > 0) {
+        await supabase.from("client_project_access").upsert(
+          clientUsers.map((row) => ({
+            client_profile_id: row.client_profile_id,
+            client_id: clientId,
+            project_id: id,
+            created_by: user.id,
+          })),
+          { onConflict: "client_profile_id,project_id" }
+        );
+      }
+    }
+  }
 
   revalidatePath("/projects");
   revalidatePath(`/projects/${id}`);

@@ -15,6 +15,7 @@ export type TaskStatus =
 export type PriorityLevel = "low" | "medium" | "high" | "urgent";
 
 export type FounderRole = "founder_a" | "founder_b" | "both";
+export type UserType = "founder" | "client";
 
 export interface Profile {
   id: string;
@@ -22,6 +23,7 @@ export interface Profile {
   full_name: string | null;
   avatar_url: string | null;
   role: FounderRole;
+  user_type?: UserType;
   created_at: string;
   updated_at: string;
 }
@@ -44,6 +46,7 @@ export interface Project {
   created_by: string;
   created_at: string;
   updated_at: string;
+  client_id?: string | null;
   tags?: Tag[];
   task_count?: number;
 }
@@ -178,6 +181,22 @@ export interface ClientActivity {
   activity_type: ActivityType;
   author_id: string;
   created_at: string;
+  author?: Pick<Profile, "id" | "full_name" | "email"> | null;
+}
+
+export type FeedbackStatus = "new" | "triaged" | "in_progress" | "done";
+
+export interface ClientFeedback {
+  id: string;
+  project_id: string;
+  author_id: string;
+  title: string;
+  description: string;
+  status: FeedbackStatus;
+  priority: PriorityLevel;
+  created_at: string;
+  updated_at: string;
+  project?: Pick<Project, "id" | "title" | "status" | "progress"> | null;
   author?: Pick<Profile, "id" | "full_name" | "email"> | null;
 }
 

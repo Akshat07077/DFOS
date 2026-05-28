@@ -10,12 +10,18 @@ import { ProjectStatusBadge, PriorityBadge } from "@/components/shared/status-ba
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn, formatRelativeDate } from "@/lib/utils";
-import type { Project, ProjectStatus } from "@/types/database";
+import type { Client, Project, ProjectStatus } from "@/types/database";
 import { PROJECT_STATUS_LABELS } from "@/types/database";
 
 type ViewMode = "grid" | "list" | "kanban";
 
-export function ProjectsView({ projects }: { projects: Project[] }) {
+export function ProjectsView({
+  projects,
+  clients,
+}: {
+  projects: Project[];
+  clients: Pick<Client, "id" | "company">[];
+}) {
   const [view, setView] = useState<ViewMode>("grid");
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -43,6 +49,7 @@ export function ProjectsView({ projects }: { projects: Project[] }) {
             ))}
           </div>
           <ProjectFormDialog
+            clients={clients}
             open={dialogOpen}
             onOpenChange={setDialogOpen}
             trigger={

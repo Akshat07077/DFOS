@@ -8,15 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import type { Project, ProjectStatus, PriorityLevel } from "@/types/database";
+import type { Client, Project, ProjectStatus, PriorityLevel } from "@/types/database";
 
 export function ProjectFormDialog({
   project,
+  clients,
   trigger,
   open: controlledOpen,
   onOpenChange,
 }: {
   project?: Project;
+  clients: Pick<Client, "id" | "company">[];
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -82,6 +84,22 @@ export function ProjectFormDialog({
                 type="datetime-local"
                 defaultValue={project?.deadline ? new Date(project.deadline).toISOString().slice(0, 16) : ""}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="client_id">Client</Label>
+              <select
+                id="client_id"
+                name="client_id"
+                defaultValue={project?.client_id ?? ""}
+                className={selectClass}
+              >
+                <option value="">No linked client</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.company}
+                  </option>
+                ))}
+              </select>
             </div>
             {project && (
               <div className="space-y-2">

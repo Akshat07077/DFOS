@@ -16,6 +16,19 @@ export async function signIn(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent(error.message)}`);
   }
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("user_type")
+      .eq("id", user.id)
+      .single();
+    redirect(profile?.user_type === "client" ? "/client" : "/dashboard");
+  }
+
   redirect("/dashboard");
 }
 
@@ -45,6 +58,7 @@ export async function signUp(formData: FormData) {
         id: data.user.id,
         email: email,
         full_name: fullName || null,
+        user_type: "founder",
       },
       { onConflict: "id" }
     );

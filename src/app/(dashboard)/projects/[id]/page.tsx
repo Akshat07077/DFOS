@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Plus } from "lucide-react";
 import { getProject } from "@/actions/projects";
+import { getClients } from "@/actions/clients";
 import { getTasks } from "@/actions/tasks";
 import { getUpdates } from "@/actions/updates";
 import { ProjectFormDialog } from "@/components/projects/project-form-dialog";
@@ -24,9 +25,10 @@ export default async function ProjectDetailPage({
     notFound();
   }
 
-  const [tasks, updates] = await Promise.all([
+  const [tasks, updates, clients] = await Promise.all([
     getTasks({ projectId: id }),
     getUpdates(id),
+    getClients(),
   ]);
 
   return (
@@ -49,6 +51,7 @@ export default async function ProjectDetailPage({
         </div>
         <ProjectFormDialog
           project={project}
+          clients={clients}
           trigger={<Button variant="outline" size="sm">Edit</Button>}
         />
       </div>
